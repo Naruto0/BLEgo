@@ -32,12 +32,14 @@ def filter(name):
     else:
         return True
 
-def findTransp(name):
-    ''' Return True if transparent (by name obviously)'''
+def findType(name):
+    ''' Return type of material based on prefix '''
     if name.startswith("Trans"):
-        return True
+        return "Transparent"
+    elif name.startswith("Metallic"):
+        return "Metallic"
     else:
-        return False
+        return "Plastic"
 
 def enhance(input_rgba):
     ''' Just pull saturation towards 1 using average value between original and 1'''
@@ -71,10 +73,10 @@ class ChangeMat(object):
         self.node_output = self.nodes.new(type='ShaderNodeOutputMaterial')
         self.node_output.location = 400, 0
 
-class ChangeDiff(ChangeMat):
-    def _init__(self, material):
-        ''' Change material o f Diffused color and add glossiness to make use of cycles engine'''
-        ChangeMat.__init__(self, material)
+class ChangePlastic(ChangeMat):
+    def __init__(self, material):
+        ''' Change material of Diffused color and add glossiness to make use of cycles engine'''
+        super(ChangePlastic, self).__init__(material)
 
     def setNodes(self):
         ''' Set subclass specific nodes '''
@@ -96,7 +98,7 @@ class ChangeDiff(ChangeMat):
 class ChangeTrans(ChangeMat):
     ''' Change material to transparent '''
     def __init__(self, material):
-        ChangeMat.__init__(self, material)
+        super(ChangeTrans, self).__init__(material)
         
     def setNodes(self):
         ''' Set subclass specific nodes '''
@@ -106,22 +108,40 @@ class ChangeTrans(ChangeMat):
 
         self.link_1 = self.links.new(self.node_glass.outputs[0], self.node_output.inputs[0])
 
+class ChangeMetal(ChangePlastic):
+    ''' Change Plastic to Metallic'''
+    def __init__(self, material):
+        super(ChangeMetal, self).__init__(material)
+
+    def setMixer(self):
+        self.node_mix.inputs[0].default_value = (0.75)
+
 def main():
     '''Iterate through materials, change to cycles eye pleasing ones'''
     for material in bpy.data.materials[:]:
         # filter out names starting with "_" 
         if filter(material.name):
-            # use other sublass for each material transparent here
-            if findTransp(material.name):
+            # use other sublass for each material type here
+            material_type = findType(material.name)
+
+            # if "Trans" prefix
+            if material_type == "Transparent":
                 # debug: print(material)
                 t = ChangeTrans(material) # Create material handling class (Transparent)
                 t.set() # set default values
                 t.setNodes() # set subclass specific data
 
-            # Diffused with little glossines here
+            # if "Metallic" prefix
+            elif material_type == "Metallic":
+                m = ChangeMetal(material)
+                m.set()
+                m.setNodes()
+                m.setMixer()
+
+            # Diffused with little glossines here at the end
             else:
                 # debug: print(material)
-                d = ChangeDiff(material) # Create material handling class (Diffused)
+                d = ChangePlastic(material) # Create material handling class (Diffused)
                 d.set() # set default parent class values
                 d.setNodes() # 
         else:
