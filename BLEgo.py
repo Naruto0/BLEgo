@@ -1,4 +1,4 @@
-import bpy, imp, colorsys
+import bpy, colorsys
 
 '''BLEgo lets you to iterate through your raw lego materials
 and convert them to decent cycles alternatives, make sure all other materials in scene start with "_" !!!!'''
